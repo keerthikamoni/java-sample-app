@@ -23,7 +23,7 @@ stages:
         SonarQube: 'SonarQubeServiceConnection'
         scannerMode: 'CLI'
         configMode: 'manual'
-        cliProjectKey: 'JavaApp'
+        cliProjectKey: 'JavaApp-$(Build.SourceBranchName)'
         cliProjectName: 'JavaApp'
         cliSources: 'src'
         extraProperties: |
