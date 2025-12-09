@@ -26,6 +26,8 @@ stages:
         cliProjectKey: 'JavaApp'
         cliProjectName: 'JavaApp'
         cliSources: 'src'
+        extraProperties: |
+          sonar.branch.name=      
 
     - task: SonarQubeAnalyze@5
     - task: SonarQubePublish@5
