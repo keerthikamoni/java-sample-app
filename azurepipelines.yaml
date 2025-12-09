@@ -1,0 +1,62 @@
+trigger:
+- main
+
+pool:
+  name: 'default'   # your Windows self-hosted agent pool
+
+stages:
+- stage: Build
+  displayName: "Build Java App"
+  jobs:
+  - job: Build
+    steps:
+    - task: Maven@3
+      inputs:
+        mavenPomFile: 'pom.xml'
+        goals: 'package'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.17'
+        publishJUnitResults: true
+
+    - task: SonarQubePrepare@5
+      inputs:
+        SonarQube: 'SonarQubeServiceConnection'
+        scannerMode: 'CLI'
+        configMode: 'manual'
+        cliProjectKey: 'JavaApp'
+        cliProjectName: 'JavaApp'
+        cliSources: 'src'
+
+    - task: SonarQubeAnalyze@5
+    - task: SonarQubePublish@5
+      inputs:
+        pollingTimeoutSec: '300'
+
+- stage: Dockerize
+  displayName: "Build Docker Image"
+  jobs:
+  - job: Docker
+    steps:
+    - script: |
+        echo "Building Docker image..."
+        docker build -t java-sample-app:$(Build.BuildId) -t java-sample-app:latest .
+        docker images java-sample-app
+      displayName: 'Build Docker Image'
+
+- stage: Deploy
+  displayName: "Deploy to kind"
+  dependsOn: Dockerize
+  jobs:
+  - job: Deploy
+    pool:
+      name: 'default'
+    steps:
+    - script: |
+        echo "Loading Docker image into kind..."
+        kind load docker-image java-sample-app:$(Build.BuildId) --name java-cluster || echo "kind load skipped"
+
+        echo "Deploying with Helm..."
+        helm upgrade --install java-sample-app ./helm-chart \
+          --set image.repository=java-sample-app \
+          --set image.tag=$(Build.BuildId)
+      displayName: 'Helm Deploy'
